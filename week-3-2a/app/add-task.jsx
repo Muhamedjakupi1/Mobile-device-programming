@@ -1,7 +1,8 @@
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal } from "react-native";
-import { Link, router } from "expo-router";
+import { Link } from "expo-router";
 import { useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {router} from "expo-router";
 
 export default function AddTask() {
     const [task, setTask] = useState("");
@@ -10,36 +11,34 @@ export default function AddTask() {
 
     const addTask = async () => {
         if (task.trim() === "") {
-            setError("Task is required");
+            setError("Task cannot be empty");
             return;
         }
 
         if (task.length < 3) {
-            setError("Task must be at least 3 characters!");
+            setError("Task cannot be less than 3 characters");
             return;
         }
 
-        setError("");
+        setError("")
         const newTask = { id: Date.now().toString(), title: task };
-
         try {
-            const stored = await AsyncStorage.getItem("tasks")
+            const stored = await AsyncStorage.getItem("tasks");
             const tasks = stored ? JSON.parse(stored) : [];
-            tasks.push(newTask)
-            await AsyncStorage.setItem("tasks", JSON.stringify(tasks));
-
-            setTask("");
+            tasks.push(newTask);
+            await AsyncStorage.setItem("tasks", JSON.stringify(tasks))
             setModalVisible(true);
+
         } catch (error) {
-            console.log("Error adding task:", error);
+            console.log("Error saving task:", error);
         }
+        setTask("");
     };
 
-    const handleModalClose = () => {
+    const handleCloseModal = () => {
         setModalVisible(false);
-        router.push("/")
+        router.push("/");
     }
-
     return (
         <View style={styles.container}>
             <View style={{ flex: 1, justifyContent: "center", alignItems: "center", marginBottom: 10 }}>
@@ -59,14 +58,14 @@ export default function AddTask() {
                     <Text style={styles.btnText}>Add</Text>
                 </TouchableOpacity>
             </View>
-            {error ? <Text style={{color: 'red', fontSize: 14}}>{error}</Text> : null}
-            <Modal visible={modalVisible} transparent animationType="fade">
+            {error ? <Text style={{ fontSize: 14, color: 'red' }}>{error}</Text> : null}
+            <Modal visible={modalVisible} transparent animationType="fide">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalBox}>
                         <Text style={styles.modalTitle}>Task created successfully!</Text>
-                        <TouchableOpacity onPress={handleModalClose}>
+                        <TouchableOpacity onPress={handleCloseModal}>
                             <View style={styles.modalBtn}>
-                                <Text style={{color: "white"}}>OK</Text>
+                                <Text style={{color: "#fff"}}>OK</Text>
                             </View>
                         </TouchableOpacity>
                     </View>
@@ -78,7 +77,7 @@ export default function AddTask() {
 }
 
 const styles = StyleSheet.create({
-    container: {padding: 20 },
+    container: { padding: 20 },
     title: { fontSize: 22, fontWeight: "bold", marginBottom: 20 },
     row: { flexDirection: "row", marginBottom: 12 },
     input: {
@@ -100,27 +99,27 @@ const styles = StyleSheet.create({
     btnText: { color: "white", fontWeight: "bold" },
     modalOverlay: {
         flex: 1,
-        backgroundColor: "rgba(0,0,0,0.5)",
-        justifyContent: "center",
-        alignItems: "center"
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center'
     },
     modalBox: {
-        backgroundColor: "white",
+        backgroundColor: 'white',
         padding: 20,
-        width: "80%",
-        minHeight: 180,
-        justifyContent: "space-around",
-        alignItems: "center",
-        borderRadius: 12
+        borderRadius: 10,
+        width: '80%',
+        height: 180,
+        justifyContent: 'space-around',
+        alignItems: 'center'
     },
     modalTitle: {
-        color: "black",
-        fontWeight: "bold",
-        fontSize: 20
+        fontSize: 20,
+        fontWeight: 'bold'
     },
     modalBtn: {
-        backgroundColor: "#007AFF",
-        borderRadius: 8,
-        padding: 10
-    },
+        backgroundColor: '#007AFF',
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 8 
+    }
 });

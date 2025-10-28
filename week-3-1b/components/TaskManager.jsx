@@ -1,36 +1,55 @@
 import { Link } from "expo-router";
-import { FlatList, StyleSheet, Text, TouchableOpacity, View, Modal, ActivityIndicator } from 'react-native'
-import { useEffect, useState } from "react";
+import { FlatList, StyleSheet, Text, TouchableOpacity, View, Modal } from 'react-native'
+import { useState, useEffect, Activity } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function TaskManager() {
     const [tasks, setTasks] = useState([]);
-    const [modalVisible, setModalVisible] = useState(false);
     const [selectedTask, setSelectedTask] = useState(null);
+    const [modalVisible, setModalVisible] = useState(false);
     const [loading, setLoading] = useState(false);
-
 
     useEffect(() => {
         loadTasks();
     }, [])
 
     const loadTasks = async () => {
-        setLoading(true)
         try {
             const stored = await AsyncStorage.getItem("tasks");
-            const storedTasks = stored ? JSON.parse(stored) : [];
-            setTasks(storedTasks)
+            const loadedTasks = stored ? JSON.parse(stored) : [];
+            setTasks(loadedTasks);
 
         } catch (error) {
-            console.log("error loading tasks:", error);
-        } finally {
-            setLoading(false);
+            console.log("Error loading tasks:", error);
+        }
+
+    }
+
+    const fetchExternalAPI = async () => {
+        try {
+            const response = await fetch("https://jsonplaceholder.typicode.com/todos?_limit=5");
+            const data = await response.json();
+            const newTasks = data.map((item) => ({
+                id: item.id.toString(),
+                title: item.title
+            }))
+
+            const updatedTasks = [
+                ...tasks,
+                ...newTasks.filter((newItem) => !tasks.some((existingItem) => existingItem.id === newItem.id))
+            ]
+
+            await AsyncStorage.setItem("tasks", JSON.stringify(updatedTasks));
+            setTasks(updatedTasks)
+
+        } catch (error) {
+            console.log("Error fetching external API:", error);
         }
     }
 
     const deleteTask = (id) => {
         setModalVisible(true);
-        setSelectedTask(id)
+        setSelectedTask(id);
     };
 
     const renderEmpty = () => (
@@ -45,30 +64,9 @@ export default function TaskManager() {
                     <Text style={styles.fetchTitle}>Fetch External API</Text>
                 </View>
             </TouchableOpacity>
+
         </View>
     );
-
-    const fetchExternalAPI = async () => {
-        try {
-            const response = await fetch("https://jsonplaceholder.typicode.com/todos?_limit=5");
-            const data = await response.json();
-            const newTasks = data.map((item) => ({
-                id: item.id.toString(),
-                title: item.title
-            }))
-            const mergedTasks = [
-                ...tasks,
-                ...newTasks.filter((task) => !tasks.some((existing) => existing.id === task.id))
-            ]
-
-            await AsyncStorage.setItem("tasks", JSON.stringify(mergedTasks));
-            setTasks(mergedTasks);
-
-
-        } catch (error) {
-            console.log("Error fetching external API:", error);
-        }
-    }
 
     const renderFooter = () => (
         <Text style={styles.listFooter}>End of the list</Text>
@@ -78,28 +76,27 @@ export default function TaskManager() {
         <View style={styles.separator} />
     );
 
+    const handleModalCancel = () => {
+        setModalVisible(false);
+        setSelectedTask(null);
+    }
+
     const handleModalClose = async () => {
         try {
-            const updatedTasks = tasks.filter((task) => task.id !== selectedTask);
+            const updatedTasks = tasks.filter((item) => item.id !== selectedTask);
             await AsyncStorage.setItem("tasks", JSON.stringify(updatedTasks));
+            setTasks(updatedTasks);
             setModalVisible(false);
             setSelectedTask(null);
-            setTasks(updatedTasks);
 
         } catch (error) {
             console.log("Error deleting task:", error);
         }
     }
-
-    const handleModalCancel = () => {
-        setModalVisible(false);
-        setSelectedTask(null)
-    }
-
     return (
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, width: '100%' }}>
             {loading ? (
-                <ActivityIndicator size="large" color="#007AFF" />
+                <ActivityIndicator size="large" color="#0000ff" />
             ) : (
                 <FlatList
                     style={styles.container}
@@ -121,20 +118,17 @@ export default function TaskManager() {
                     ListFooterComponent={renderFooter}
                 />
             )}
-            <Modal visible={modalVisible} transparent animationType="fade">
+
+            <Modal visible={modalVisible} transparent animationType="slide">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalBox}>
-                        <Text style={styles.modalTitle}>Are you sure you want to delete this task?</Text>
-                        <View style={{ flexDirection: "row", justifyContent: "space-around", alignItems: "center", gap: 20 }}>
+                        <Text style={styles.modalTitle}>Do you want to delete this task?</Text>
+                        <View style={{ flexDirection: "row", justifyContent: "space-around", alignItems: "center", width: "100%", marginTop: 20 }}>
                             <TouchableOpacity onPress={handleModalCancel}>
-                                <View style={styles.modalCancelBtn}>
-                                    <Text style={{ color: "white" }}>Cancel</Text>
-                                </View>
+                                <Text style={styles.modalCancelBtn}>Cancel</Text>
                             </TouchableOpacity>
                             <TouchableOpacity onPress={handleModalClose}>
-                                <View style={styles.modalBtn}>
-                                    <Text style={{ color: "white" }}>Delete</Text>
-                                </View>
+                                <Text style={styles.modalBtn}>Delete</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -147,7 +141,7 @@ export default function TaskManager() {
 const styles = StyleSheet.create({
     container: { padding: 20 },
     title: { fontSize: 22, fontWeight: "bold", marginBottom: 20 },
-    row: { flex: 1, flexDirection: "row", marginBottom: 12 },
+    row: { flexDirection: "row", marginBottom: 12 },
     input: {
         flex: 1,
         backgroundColor: "white",
@@ -199,42 +193,55 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "rgba(0,0,0,0.5)",
         justifyContent: "center",
-        alignItems: "center"
+        alignItems: "center",
     },
     modalBox: {
         backgroundColor: "white",
-        padding: 20,
         width: "80%",
-        minHeight: 180,
-        justifyContent: "space-around",
+        padding: 20,
+        borderRadius: 10,
         alignItems: "center",
-        borderRadius: 12
+        justifyContent: "space-around",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+        minHeight: 180
     },
     modalTitle: {
-        color: "black",
+        fontSize: 20,
         fontWeight: "bold",
-        fontSize: 20
+        color: '#000'
     },
     modalBtn: {
         backgroundColor: "red",
-        borderRadius: 8,
-        padding: 10
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        fontSize: 14,
+        fontWeight: "bold",
+        color: "white",
+        borderRadius: 8
     },
     modalCancelBtn: {
         backgroundColor: "gray",
-        borderRadius: 8,
-        padding: 10
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        fontSize: 14,
+        fontWeight: "bold",
+        color: "black",
+        borderRadius: 8
     },
     fetchBtn: {
         backgroundColor: "#007AFF",
         padding: 10,
-        marginTop: 10,
         borderRadius: 8,
-        width: 150,
-        marginBottom: 15
+        marginBottom: 20,
+        width: 150
     },
     fetchTitle: {
         color: "white",
         fontWeight: "bold",
+        textAlign: "center",
     }
 });

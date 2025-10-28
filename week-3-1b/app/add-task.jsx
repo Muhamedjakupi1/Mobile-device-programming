@@ -1,43 +1,47 @@
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal } from "react-native";
-import { Link, router } from "expo-router";
+import { Link } from "expo-router";
 import { useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {router} from "expo-router";
 
 export default function AddTask() {
     const [task, setTask] = useState("");
-    const [error, setError] = useState("");
-    const [modalVisible, setModalVisible] = useState(false)
+    const [error, setError] = useState("")
+    const [modalVisible, setModalVisible] = useState(false);
 
     const addTask = async () => {
         if (task.trim() === "") {
-            setError("Task is required");
+            setError("Task is required!");
             return;
         }
-
-        if (task.length < 3) {
+        
+        if (task.length <3) {
             setError("Task must be at least 3 characters!");
             return;
         }
 
-        setError("");
+        setError("")
         const newTask = { id: Date.now().toString(), title: task };
-
         try {
-            const stored = await AsyncStorage.getItem("tasks")
-            const tasks = stored ? JSON.parse(stored) : [];
-            tasks.push(newTask)
+            const stored = await AsyncStorage.getItem("tasks");
+            const tasks = stored? JSON.parse(stored) : [];
+            tasks.push(newTask);
+
             await AsyncStorage.setItem("tasks", JSON.stringify(tasks));
 
-            setTask("");
-            setModalVisible(true);
+            
         } catch (error) {
-            console.log("Error adding task:", error);
+            console.log("Error saving task:", error);
         }
+        
+        setTask("");
+        setModalVisible(true);
     };
 
     const handleModalClose = () => {
         setModalVisible(false);
-        router.push("/")
+        router.push("/");
+
     }
 
     return (
@@ -59,15 +63,13 @@ export default function AddTask() {
                     <Text style={styles.btnText}>Add</Text>
                 </TouchableOpacity>
             </View>
-            {error ? <Text style={{color: 'red', fontSize: 14}}>{error}</Text> : null}
-            <Modal visible={modalVisible} transparent animationType="fade">
+            {error ? <Text style={{ color: "red", marginTop: 5, fontSize: 14 }}>{error}</Text> : null}
+            <Modal visible={modalVisible} transparent animationType="slide">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalBox}>
                         <Text style={styles.modalTitle}>Task created successfully!</Text>
                         <TouchableOpacity onPress={handleModalClose}>
-                            <View style={styles.modalBtn}>
-                                <Text style={{color: "white"}}>OK</Text>
-                            </View>
+                            <Text style={styles.modalBtn}>OK</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -100,27 +102,36 @@ const styles = StyleSheet.create({
     btnText: { color: "white", fontWeight: "bold" },
     modalOverlay: {
         flex: 1,
-        backgroundColor: "rgba(0,0,0,0.5)",
+        backgroundColor: "rgba(0,0,0,0.5)", 
         justifyContent: "center",
-        alignItems: "center"
-    },
-    modalBox: {
-        backgroundColor: "white",
-        padding: 20,
-        width: "80%",
-        minHeight: 180,
-        justifyContent: "space-around",
         alignItems: "center",
-        borderRadius: 12
-    },
-    modalTitle: {
-        color: "black",
+      },
+      modalBox: {
+        backgroundColor: "white",
+        width: "80%",
+        padding: 20,
+        borderRadius: 10,
+        alignItems: "center",
+        justifyContent: "space-around",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+        minHeight: 180
+      },
+      modalTitle: {
+        fontSize: 20,
         fontWeight: "bold",
-        fontSize: 20
+        color: '#000'
     },
     modalBtn: {
         backgroundColor: "#007AFF",
-        borderRadius: 8,
-        padding: 10
-    },
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        fontSize: 14,
+        fontWeight: "bold",
+        color: "white",
+        borderRadius: 8
+    }
 });

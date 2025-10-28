@@ -1,16 +1,39 @@
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal } from "react-native";
 import { Link } from "expo-router";
 import { useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from "expo-router";
 
 export default function AddTask() {
     const [task, setTask] = useState("");
+    const [error, setError] = useState("");
+    const [modalVisible, setModalVisible] = useState(false);
 
-    const addTask = () => {
-        if (task.trim() === "") return;
+    const addTask = async () => {
+        if (task.trim() === "") {
+            setError("Task is required!");
+        }
+
+        if (task.length < 3) {
+            setError("Task must be at least 3 characters!");
+            return;
+        }
+        setError("");
         const newTask = { id: Date.now().toString(), title: task };
-        // setTasks([...tasks, newTask]);
+
+        const stored = await AsyncStorage.getItem("tasks");
+        const tasks = stored ? JSON.parse(stored) : [];
+        tasks.push(newTask);
+
+        await AsyncStorage.setItem("tasks", JSON.stringify(tasks));
         setTask("");
+        setModalVisible(true);
     };
+
+    const handleModalClose = () => {
+        setModalVisible(false)
+        router.push("/")
+    }
 
     return (
         <View style={styles.container}>
@@ -31,6 +54,17 @@ export default function AddTask() {
                     <Text style={styles.btnText}>Add</Text>
                 </TouchableOpacity>
             </View>
+            {error ? <Text style={{color: 'red', fontSize: 14}}>{error}</Text> : null}
+            <Modal visible={modalVisible} transparent animationType="fade">
+                <View style={styles.modalOVerlay}>
+                    <View style={styles.modalBox}>
+                        <Text style={styles.modalTitle}>Task created successfully!</Text>
+                        <TouchableOpacity onPress={handleModalClose}>
+                            <Text style={styles.modalBtn}>OK</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View>
 
     );
@@ -57,34 +91,31 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     btnText: { color: "white", fontWeight: "bold" },
-    taskItem: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        backgroundColor: "lightblue",
-        padding: 12,
+    modalOVerlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        justifyContent: "center",
+        alignItems: "center"
+    },
+    modalBox: {
+        backgroundColor: "white",
         borderRadius: 8,
-        marginBottom: 4,
-        elevation: 2,
+        boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+        justifyContent: "space-around",
+        alignItems: "center",
+        padding: 20,
+        width: "80%",
+        minHeight: 180
     },
-    separator: {
-        height: 8,
-    },
-    emptyText: {
-        textAlign: "center",
-        marginTop: 40,
-        fontSize: 16,
-        color: "#888",
-    },
-    listHeader: {
+    modalTitle: {
         fontSize: 18,
-        fontWeight: "600",
-        marginBottom: 10,
+        fontWeight: "bold",
+        marginBottom: 10
     },
-    listFooter: {
-        textAlign: "center",
-        marginTop: 10,
-        fontSize: 14,
-        color: "#666",
-    },
+    modalBtn: {
+        backgroundColor: "#007AFF",
+        color: "white",
+        padding: 10,
+        borderRadius: 8
+    }
 });
