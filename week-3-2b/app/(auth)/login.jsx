@@ -1,96 +1,155 @@
-import { StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native'
-import React, { useState } from 'react'
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import {auth} from '../../firebase'
+import React, { useEffect, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
+import { auth } from '../../firebase';
 import { router } from 'expo-router';
+import * as Google from 'expo-auth-session/providers/google';
+import { makeRedirectUri } from 'expo-auth-session';
 
-const login = () => {
-    const [email, setEmail] = useState("")
-    const [password, setPassword] = useState("")
-    const [error, setError] = useState("")
-    const [loading, setLoading] = useState(false)
+const Register = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
 
-    const validateInputs = () => {
-        if (email.trim() === "" || password.trim() === "") {
-            setError("Both fields are required");
-            return false;
-        }
+  // --- Google Auth ---
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    expoClientId: '1008413766201-9d2c2hta9jjdvo7b859ndrak3d8fq964.apps.googleusercontent.com',
+    redirectUri: makeRedirectUri({ useProxy: true }),
+  });
 
-        const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-        if (!emailRegex.test(email)) {
-            setError("Email is not valid");
-            return false;
-        }
-
-        setError("");
-        return true;
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      const credential = GoogleAuthProvider.credential(id_token);
+      signInWithCredential(auth, credential)
+        .then(() => {
+          setModalVisible(true);
+        })
+        .catch(err => setError(err.message));
     }
+  }, [response]);
 
-    const handleLogin = async () => {
-        if (!validateInputs()) return;
-        setLoading(true)
-        try {
-            await signInWithEmailAndPassword(auth, email, password);
-            setLoading(false);
-            router.push("/")
-        } catch (error) {
-            if (error.code === "auth/invalid-credential") {
-                setError("Incorrect email or password")
-            } else {
-                setError(error.message)
-            }
-        }
+  const validateInputs = () => {
+    if (email.trim() === '' || password.trim() === '' || confirmPassword.trim() === '') {
+      setError('All fields are required');
+      return false;
     }
-    return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Log In</Text>
+    const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Email is not valid');
+      return false;
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return false;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return false;
+    }
+    setError('');
+    return true;
+  };
 
-            <TextInput
-                placeholder='Email'
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize='none'
-                style={styles.input}
-            />
+  const handleSignUp = async () => {
+    if (!validateInputs()) return;
+    setLoading(true);
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      setLoading(false);
+      setModalVisible(true);
+    } catch (err) {
+      if (err.code === 'auth/email-already-in-use') {
+        setError('Email already exists');
+      } else {
+        setError(err.message);
+      }
+      setLoading(false);
+    }
+  };
 
-            <TextInput
-                placeholder='Password'
-                value={password}
-                onChangeText={setPassword}
-                style={styles.input}
-                secureTextEntry
-            />
+  const handleModalClose = () => {
+    setModalVisible(false);
+    router.push('/login');
+  };
 
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-            <TouchableOpacity style={styles.btn} onPress={handleLogin}>
-                <Text style={styles.btnText}>{loading ? "Logging in..." : "Login"}</Text>
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Create an Account</Text>
+
+      <TextInput
+        placeholder="Email"
+        value={email}
+        onChangeText={setEmail}
+        autoCapitalize="none"
+        style={styles.input}
+      />
+      <TextInput
+        placeholder="Password"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+        style={styles.input}
+      />
+      <TextInput
+        placeholder="Confirm Password"
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        secureTextEntry
+        style={styles.input}
+      />
+
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      <TouchableOpacity style={styles.btn} onPress={handleSignUp}>
+        <Text style={styles.btnText}>{loading ? 'Creating user...' : 'Create'}</Text>
+      </TouchableOpacity>
+
+      {/* --- Google Sign-In Button --- */}
+      <TouchableOpacity
+        style={[styles.btn, { backgroundColor: '#DB4437', marginTop: 10 }]}
+        disabled={!request}
+        onPress={() => {
+          promptAsync();
+        }}
+      >
+        <Text style={styles.btnText}>Sign in with Google</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => router.push('/login')}>
+        <Text style={styles.link}>Already have an account? Log In</Text>
+      </TouchableOpacity>
+
+      <Modal visible={modalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>User created successfully!</Text>
+            <TouchableOpacity onPress={handleModalClose} style={styles.modalBtnContainer}>
+              <Text style={styles.modalBtn}>OK</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() =>router.push("/register")}>
-                <Text style={styles.link}>Don't have an account? Sign Up</Text>
-            </TouchableOpacity>
+          </View>
         </View>
-    )
-}
+      </Modal>
+    </View>
+  );
+};
 
-export default login
+export default Register;
 
 const styles = StyleSheet.create({
-    container: { flex: 1, justifyContent: "center", padding: 20 },
-    title: { fontSize: 26, fontWeight: "bold", marginBottom: 25, textAlign: "center" },
-    input: {
-        borderWidth: 1,
-        borderColor: "#ccc",
-        padding: 12,
-        marginVertical: 5,
-        borderRadius: 8
-    },
-    btn: {
-        backgroundColor: "#007AFF",
-        padding: 14,
-        borderRadius: 8,
-        marginTop: 15
-    },
-    btnText: { color: "white", textAlign: "center", fontWeight: "600" },
-    link: { marginTop: 10, textAlign: "center", color: "#007AFF" },
-    error: { color: "red", marginTop: 10, textAlign: "center" },
-})
+  container: { flex: 1, justifyContent: 'center', padding: 20 },
+  title: { fontSize: 26, fontWeight: 'bold', marginBottom: 25, textAlign: 'center' },
+  input: { borderWidth: 1, borderColor: '#ccc', padding: 12, marginVertical: 5, borderRadius: 8 },
+  btn: { backgroundColor: '#007AFF', padding: 14, borderRadius: 8, marginTop: 15 },
+  btnText: { color: 'white', textAlign: 'center', fontWeight: '600' },
+  link: { marginTop: 10, textAlign: 'center', color: '#007AFF' },
+  error: { color: 'red', marginTop: 10, textAlign: 'center' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalBox: { backgroundColor: 'white', borderRadius: 8, padding: 20, width: '80%', minHeight: 180, justifyContent: 'center', alignItems: 'center' },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
+  modalBtnContainer: { backgroundColor: '#007AFF', padding: 10, borderRadius: 8, marginTop: 10 },
+  modalBtn: { color: 'white', textAlign: 'center', fontWeight: 'bold' },
+});
