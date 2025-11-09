@@ -1,5 +1,6 @@
 {
   "name": "week-3-2b",
+  "slug": "my-login-app",
   "version": "1.0.0",
   "main": "expo-router/entry",
   "scripts": {
@@ -20,6 +21,7 @@
     "expo-linking": "~8.0.8",
     "expo-router": "~6.0.10",
     "expo-status-bar": "~3.0.8",
+    "expo-web-browser": "~15.0.9",
     "firebase": "^12.5.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
