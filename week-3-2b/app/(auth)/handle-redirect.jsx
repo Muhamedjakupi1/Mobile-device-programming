@@ -13,14 +13,14 @@ export default function HandleRedirect() {
         const result = await getRedirectResult(auth);
         
         if (result?.user) {
-          console.log('✅ Redirect sign-in successful!', result.user.email);
-          router.replace('/'); // Shko në faqen kryesore
+          console.log('Redirect sign-in successful!', result.user.email);
+          router.replace('/'); 
         } else {
-          console.log('❌ No user found in redirect result');
+          console.log('No user found in redirect result');
           router.replace('/register');
         }
       } catch (error) {
-        console.error('❌ Error handling redirect:', error);
+        console.error('Error handling redirect:', error);
         router.replace('/register');
       }
     };
